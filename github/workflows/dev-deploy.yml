@@ -1,0 +1,55 @@
+name: Build & Push Image to DEV ECR
+
+on:
+  push:
+    branches:
+      - dev
+
+env:
+  AWS_REGION: "us-east-1"
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  DOCKERFILE_PATH: "./Dockerfile"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_DEV }}:role/GitHubActionsPushToECRRole
+
+      - name: Login to Amazon ECR (DEV)
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker Image
+        run: |
+          SHA="${{ github.sha }}"
+          REGISTRY="${{ steps.ecr.outputs.registry }}"
+          IMAGE_URI="$REGISTRY/${{ env.ECR_REPOSITORY }}"
+
+          echo "Building image: $IMAGE_URI:$SHA"
+
+          docker build \
+            -f "${{ env.DOCKERFILE_PATH }}" \
+            -t "$IMAGE_URI:$SHA" .
+
+      - name: Push Image
+        run: |
+          SHA="${{ github.sha }}"
+          REGISTRY="${{ steps.ecr.outputs.registry }}"
+          IMAGE_URI="$REGISTRY/${{ env.ECR_REPOSITORY }}"
+
+          docker push "$IMAGE_URI:$SHA"
+
+      - name: Done
+        run: echo "Image pushed successfully."
