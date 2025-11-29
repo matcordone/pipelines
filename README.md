@@ -145,5 +145,8 @@ El workflow taggea las imágenes así:
 AWS_ACCOUNT_DEV	ID de la cuenta AWS DEV
 
 ## 🧪 Dockerfile de ejemplo simple
+
+```
 FROM alpine:3.20
 CMD ["echo", "Hello from DEV build!"]
+```
